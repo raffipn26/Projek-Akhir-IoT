@@ -1,0 +1,14 @@
+{
+  "aedes": {
+    "username": "${ABSENSI_MQTT_USER}",
+    "password": "${ABSENSI_MQTT_PASS}"
+  },
+  "broker_lokal": {
+    "user": "${ABSENSI_MQTT_USER}",
+    "password": "${ABSENSI_MQTT_PASS}"
+  },
+  "broker_tb": {
+    "user": "${TB_GATEWAY_TOKEN}",
+    "password": ""
+  }
+}

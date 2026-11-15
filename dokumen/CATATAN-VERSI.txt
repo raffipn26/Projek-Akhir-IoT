@@ -1,0 +1,22 @@
+CATATAN VERSI - Absensi Karyawan e-KTP
+======================================
+
+CARA MEMPERBARUI (untuk semua versi):
+  1. Ekstrak zip baru MENIMPA folder lama (pilih "Replace the files").
+  2. Klik dua kali MULAI.bat, tekan ENTER.
+  Hanya bagian yang berubah yang dikerjakan ulang. Daftar karyawan, jadwal,
+  WiFi, token, sertifikat, dan rekap absen tidak ditimpa.
+
+Versi 1 (15 Nov 2026)
+---------------------
+- MULAI.bat: satu-satunya file yang perlu diklik (pemasangan pertama, pembaruan, pemakaian
+  sehari-hari). Layar utama: ENTER = jalankan semuanya, L = pilihan lain.
+  Pengaturan dicadangkan otomatis sebelum diubah.
+- Nama WiFi dan IP laptop terdeteksi otomatis (peringatan bila WiFi 5 GHz).
+- Editor Node-RED terbuka sendiri dan langsung masuk (tanpa mengetik password).
+- Setup ThingsBoard otomatis, bisa login dengan tombol Google.
+- Board ESP32 dan library Arduino dipasang otomatis.
+- Aturan absen: masuk sekali, pulang sekali (dari jam pulang s.d. sebelum 21:00),
+  kartu hanya diterima bila ada orang di depan alat (HC-SR04 < 50 cm),
+  lupa absen pulang -> pulang dicatat 17:00 tanpa lembur.
+- Tombol BOOT ESP32 ditahan 3 detik = hapus data uji hari ini.

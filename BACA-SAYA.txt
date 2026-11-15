@@ -1,0 +1,26 @@
+ABSENSI KARYAWAN e-KTP - CARA PAKAI
+====================================
+
+SIAPKAN SEKALI SAJA
+  - Node.js LTS         : https://nodejs.org
+  - Arduino IDE 2       : https://www.arduino.cc/en/software
+  - Google Chrome atau Microsoft Edge
+  - Akun ThingsBoard    : https://thingsboard.cloud (boleh daftar pakai Google)
+
+CARA PAKAI
+  1. Colokkan ESP32 ke laptop.
+  2. Klik dua kali MULAI.bat
+  3. Ikuti layar:
+       Pertama kali : login ThingsBoard di jendela browser (klik tombol Google),
+                      lalu ketik password WiFi (nama WiFi terisi sendiri, cukup Enter).
+       Berikutnya   : cukup tekan ENTER.
+
+  Jendela "Node-RED absensi" yang muncul JANGAN ditutup (itu yang menjalankan sistem).
+  Editor Node-RED terbuka sendiri di browser, langsung masuk tanpa password.
+
+ADA ZIP VERSI BARU?
+  Ekstrak menimpa folder ini (pilih "Replace the files"), klik MULAI.bat, tekan ENTER.
+  Data karyawan, jadwal, WiFi, dan token tidak akan hilang.
+
+Pilihan lain (Serial Monitor, ganti WiFi, buka dashboard, dll.): di MULAI.bat ketik L.
+Panduan lengkap: PANDUAN.md

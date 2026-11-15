@@ -1,0 +1,852 @@
+[
+  {
+    "id": "tls_lokal",
+    "type": "tls-config",
+    "name": "TLS broker lokal (CA kelompok)",
+    "cert": "",
+    "key": "",
+    "ca": "${ABSENSI_CA_CRT}",
+    "certname": "",
+    "keyname": "",
+    "caname": "",
+    "servername": "",
+    "verifyservercert": true,
+    "alpnprotocol": ""
+  },
+  {
+    "id": "tls_tb",
+    "type": "tls-config",
+    "name": "TLS ThingsBoard Cloud",
+    "cert": "",
+    "key": "",
+    "ca": "${ABSENSI_TB_CA}",
+    "certname": "",
+    "keyname": "",
+    "caname": "",
+    "servername": "",
+    "verifyservercert": true,
+    "alpnprotocol": ""
+  },
+  {
+    "id": "broker_lokal",
+    "type": "mqtt-broker",
+    "name": "Broker lokal (Aedes)",
+    "broker": "127.0.0.1",
+    "port": "8883",
+    "tls": "tls_lokal",
+    "clientid": "node-red-absensi",
+    "autoConnect": true,
+    "usetls": true,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "autoUnsubscribe": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthRetain": "false",
+    "birthPayload": "",
+    "birthMsg": {},
+    "closeTopic": "",
+    "closeQos": "0",
+    "closeRetain": "false",
+    "closePayload": "",
+    "closeMsg": {},
+    "willTopic": "",
+    "willQos": "0",
+    "willRetain": "false",
+    "willPayload": "",
+    "willMsg": {},
+    "userProps": "",
+    "sessionExpiry": ""
+  },
+  {
+    "id": "broker_tb",
+    "type": "mqtt-broker",
+    "name": "ThingsBoard (Gateway Node-RED)",
+    "broker": "${TB_HOST}",
+    "port": "${TB_PORT}",
+    "tls": "tls_tb",
+    "clientid": "node-red-gateway-absensi",
+    "autoConnect": true,
+    "usetls": true,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "autoUnsubscribe": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthRetain": "false",
+    "birthPayload": "",
+    "birthMsg": {},
+    "closeTopic": "",
+    "closeQos": "0",
+    "closeRetain": "false",
+    "closePayload": "",
+    "closeMsg": {},
+    "willTopic": "",
+    "willQos": "0",
+    "willRetain": "false",
+    "willPayload": "",
+    "willMsg": {},
+    "userProps": "",
+    "sessionExpiry": ""
+  },
+  {
+    "id": "tab_data",
+    "type": "tab",
+    "label": "1. Data Absensi",
+    "disabled": false,
+    "info": "ESP32 -> broker Aedes -> validasi -> status harian -> ThingsBoard (Gateway API)"
+  },
+  {
+    "id": "c1",
+    "type": "comment",
+    "z": "tab_data",
+    "name": "ESP32 -> Node-RED -> ThingsBoard",
+    "info": "Broker MQTT TLS port 8883 berjalan di node Broker Absensi.\nUsername/password perangkat dan path sertifikat diambil dari rahasia.json lewat settings.js.",
+    "x": 220,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "aedes",
+    "type": "aedes broker",
+    "z": "tab_data",
+    "name": "Broker Absensi (TLS 8883)",
+    "mqtt_port": "8883",
+    "mqtt_ws_bind": "port",
+    "mqtt_ws_port": "",
+    "mqtt_ws_path": "",
+    "cert": "${ABSENSI_BROKER_CRT}",
+    "key": "${ABSENSI_BROKER_KEY}",
+    "ca": "",
+    "certname": "",
+    "keyname": "",
+    "caname": "",
+    "persistence_bind": "memory",
+    "persist_to_file": true,
+    "dburl": "",
+    "usetls": true,
+    "x": 190,
+    "y": 100,
+    "wires": [
+      [
+        "dbg_klien"
+      ],
+      []
+    ]
+  },
+  {
+    "id": "dbg_klien",
+    "type": "debug",
+    "z": "tab_data",
+    "name": "klien broker",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "true",
+    "targetType": "full",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 430,
+    "y": 100,
+    "wires": []
+  },
+  {
+    "id": "in_event",
+    "type": "mqtt in",
+    "z": "tab_data",
+    "name": "absensi/+/event",
+    "topic": "absensi/+/event",
+    "qos": "1",
+    "datatype": "json",
+    "broker": "broker_lokal",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 160,
+    "y": 180,
+    "wires": [
+      [
+        "f_validasi"
+      ]
+    ]
+  },
+  {
+    "id": "f_validasi",
+    "type": "function",
+    "z": "tab_data",
+    "name": "Validasi event",
+    "func": "// Event dari ESP32 (topik absensi/<id>/event)\nconst p = msg.payload;\nif (!p || typeof p !== 'object' || typeof p.ts !== 'number' || typeof p.status !== 'string') {\n    node.warn('Event ditolak, format salah: ' + JSON.stringify(p));\n    return null;\n}\nif (p.kartu && !/^[0-9a-f]{16}$/.test(p.kartu)) {\n    node.warn('Event ditolak, hash kartu tidak valid: ' + p.kartu);\n    return null;\n}\nconst id = msg.topic.split('/')[1];                       // absensi-01\nmsg.perangkat = id;\nmsg.namaPerangkat = id.replace(/^./, c => c.toUpperCase()); // Absensi-01 (nama device di ThingsBoard)\nnode.status({ fill: 'green', shape: 'dot', text: p.status + ' ' + (p.nama || '') });\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 370,
+    "y": 180,
+    "wires": [
+      [
+        "f_harian"
+      ]
+    ]
+  },
+  {
+    "id": "f_harian",
+    "type": "function",
+    "z": "tab_data",
+    "name": "Simpan status harian",
+    "func": "// Simpan status hari ini per karyawan (scan masuk pertama, scan pulang terakhir)\nconst WIB = 7 * 3600 * 1000;\nconst p = msg.payload;\nconst d = new Date(p.ts + WIB);\nconst tanggal = d.toISOString().slice(0, 10);\nconst menit = d.getUTCHours() * 60 + d.getUTCMinutes();\nconst keMenit = s => { const m = /^(\\d\\d):(\\d\\d)$/.exec(s || ''); return m ? (+m[1]) * 60 + (+m[2]) : null; };\n\nconst harian = global.get('harian') || {};\n\n// Tombol BOOT ESP32 ditahan 3 detik (mode uji): data absen hari itu dikosongkan,\n// status tutup hari dilepas agar rekap dihitung lagi pada batas absen.\nif (p.status === 'RESET_UJI') {\n    delete harian[tanggal];\n    global.set('harian', harian);\n    for (const k of ['tanggalDitutup', 'tutupOtomatis']) {\n        const g = global.get(k) || {};\n        delete g[tanggal];\n        global.set(k, g);\n    }\n    node.warn('RESET UJI dari tombol BOOT: data absen ' + tanggal + ' dikosongkan');\n    node.status({ fill: 'yellow', shape: 'dot', text: 'reset uji ' + tanggal });\n    msg.tanggal = tanggal;\n    return [msg, null];\n}\n\nconst hari = harian[tanggal] || (harian[tanggal] = {});\nlet berubah = false;\nif (p.kartu) {\n    const r = hari[p.kartu] || { nama: p.nama || '', masuk: null, pulang: null };\n    if (p.nama) r.nama = p.nama;\n    if (p.status === 'MASUK_TEPAT' || p.status === 'MASUK_TELAT') {\n        if (r.masuk === null || menit < r.masuk) { r.masuk = menit; berubah = true; }\n    } else if (p.status === 'PULANG' || p.status === 'PULANG_CEPAT') {\n        const m = keMenit(p.masuk);\n        if (r.masuk === null && m !== null) { r.masuk = m; berubah = true; }\n        if (r.pulang === null || menit > r.pulang) { r.pulang = menit; berubah = true; }\n    } else if (p.status === 'LUPA_ABSEN_MASUK') {\n        if (r.pulang === null || menit > r.pulang) { r.pulang = menit; berubah = true; }\n    }\n    hari[p.kartu] = r;\n}\n// simpan maksimal 40 hari terakhir\nconst batas = new Date(Date.now() + WIB - 40 * 86400000).toISOString().slice(0, 10);\nfor (const t of Object.keys(harian)) if (t < batas) delete harian[t];\nglobal.set('harian', harian);\nmsg.tanggal = tanggal;\n\n// data antrian offline yang datang setelah hari itu ditutup -> rekap dihitung ulang\nconst ditutup = global.get('tanggalDitutup') || {};\nconst ulang = (berubah && ditutup[tanggal]) ? { topic: 'hitung-ulang', tanggal: tanggal } : null;\nreturn [msg, ulang];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 580,
+    "y": 180,
+    "wires": [
+      [
+        "f_format",
+        "dbg_event"
+      ],
+      [
+        "lo_ulang"
+      ]
+    ]
+  },
+  {
+    "id": "lo_ulang",
+    "type": "link out",
+    "z": "tab_data",
+    "name": "hitung ulang rekap",
+    "mode": "link",
+    "links": [
+      "li_ulang"
+    ],
+    "x": 765,
+    "y": 220,
+    "wires": []
+  },
+  {
+    "id": "f_format",
+    "type": "function",
+    "z": "tab_data",
+    "name": "Format Gateway API",
+    "func": "// Ubah ke format Gateway API ThingsBoard\nconst p = msg.payload;\nconst dev = msg.namaPerangkat;\nconst values = Object.assign({}, p);\ndelete values.ts;\nconst keluar = [{ topic: 'v1/gateway/telemetry', payload: { [dev]: [{ ts: p.ts, values: values }] } }];\nif (p.status === 'TIDAK_TERDAFTAR') {\n    // muncul di Client attributes perangkat: hash ini yang didaftarkan admin\n    const waktu = new Date(p.ts + 7 * 3600000).toISOString().slice(0, 16).replace('T', ' ');\n    keluar.push({ topic: 'v1/gateway/attributes', payload: { [dev]: { kartu_baru: p.kartu, kartu_baru_waktu: waktu } } });\n}\nreturn [keluar];",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 800,
+    "y": 160,
+    "wires": [
+      [
+        "out_tb1"
+      ]
+    ]
+  },
+  {
+    "id": "dbg_event",
+    "type": "debug",
+    "z": "tab_data",
+    "name": "event masuk",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "true",
+    "targetType": "full",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 790,
+    "y": 260,
+    "wires": []
+  },
+  {
+    "id": "out_tb1",
+    "type": "mqtt out",
+    "z": "tab_data",
+    "name": "ThingsBoard",
+    "topic": "",
+    "qos": "1",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "broker_tb",
+    "x": 1010,
+    "y": 160,
+    "wires": []
+  },
+  {
+    "id": "in_ringkasan",
+    "type": "mqtt in",
+    "z": "tab_data",
+    "name": "absensi/+/ringkasan",
+    "topic": "absensi/+/ringkasan",
+    "qos": "1",
+    "datatype": "json",
+    "broker": "broker_lokal",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 170,
+    "y": 320,
+    "wires": [
+      [
+        "f_ringkasan"
+      ]
+    ]
+  },
+  {
+    "id": "f_ringkasan",
+    "type": "function",
+    "z": "tab_data",
+    "name": "Ringkasan 30 detik",
+    "func": "// Ringkasan 30 detik dari ESP32 -> telemetri ThingsBoard\nconst p = msg.payload;\nif (!p || typeof p !== 'object') return null;\nconst id = msg.topic.split('/')[1];\nconst dev = id.replace(/^./, c => c.toUpperCase());\nconst values = Object.assign({}, p);\nconst ts = typeof p.ts === 'number' && p.ts > 1700000000000 ? p.ts : Date.now();\ndelete values.ts;\nreturn { topic: 'v1/gateway/telemetry', payload: { [dev]: [{ ts: ts, values: values }] } };",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 320,
+    "wires": [
+      [
+        "out_tb1"
+      ]
+    ]
+  },
+  {
+    "id": "in_status",
+    "type": "mqtt in",
+    "z": "tab_data",
+    "name": "absensi/+/status",
+    "topic": "absensi/+/status",
+    "qos": "1",
+    "datatype": "utf8",
+    "broker": "broker_lokal",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 160,
+    "y": 380,
+    "wires": [
+      [
+        "f_status"
+      ]
+    ]
+  },
+  {
+    "id": "f_status",
+    "type": "function",
+    "z": "tab_data",
+    "name": "Status perangkat",
+    "func": "// online/offline dari ESP32 (last will) -> client attribute\nconst id = msg.topic.split('/')[1];\nconst dev = id.replace(/^./, c => c.toUpperCase());\nconst s = String(msg.payload);\nnode.status({ fill: s === 'online' ? 'green' : 'red', shape: 'dot', text: dev + ' ' + s });\nconst waktu = new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 16).replace('T', ' ');\nreturn { topic: 'v1/gateway/attributes', payload: { [dev]: { status_perangkat: s, status_waktu: waktu } } };",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 390,
+    "y": 380,
+    "wires": [
+      [
+        "out_tb1"
+      ]
+    ]
+  },
+  {
+    "id": "inj_waktu",
+    "type": "inject",
+    "z": "tab_data",
+    "name": "tiap 60 detik",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "60",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 5,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 150,
+    "y": 460,
+    "wires": [
+      [
+        "f_waktu"
+      ]
+    ]
+  },
+  {
+    "id": "f_waktu",
+    "type": "function",
+    "z": "tab_data",
+    "name": "Jam untuk ESP32",
+    "func": "// Jam laptop dikirim ke ESP32 (cadangan bila ESP32 tidak bisa NTP)\nmsg.topic = 'absensi/waktu';\nmsg.payload = String(Math.floor(Date.now() / 1000));\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 460,
+    "wires": [
+      [
+        "out_lokal1"
+      ]
+    ]
+  },
+  {
+    "id": "out_lokal1",
+    "type": "mqtt out",
+    "z": "tab_data",
+    "name": "broker lokal",
+    "topic": "",
+    "qos": "1",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "broker_lokal",
+    "x": 560,
+    "y": 460,
+    "wires": []
+  },
+  {
+    "id": "tab_tutup",
+    "type": "tab",
+    "label": "2. Tutup Hari",
+    "disabled": false,
+    "info": "Pada batas absen (bawaan 21:00) menghitung rekap final: jam kerja, lembur, lupa absen pulang (dihitung sampai 17:00, lembur 0), tidak hadir, lembur mingguan."
+  },
+  {
+    "id": "c2",
+    "type": "comment",
+    "z": "tab_tutup",
+    "name": "Tutup hari otomatis pada batas absen (21:00 WIB)",
+    "info": "Batas diambil dari shared attribute jadwal.batas_absen (bawaan jam_pulang + maks_lembur = 21:00).\nTombol 'Tutup hari ini (uji)' dipakai saat demo agar tidak perlu menunggu.",
+    "x": 240,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "inj_cek",
+    "type": "inject",
+    "z": "tab_tutup",
+    "name": "tiap 60 detik",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "60",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 10,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 140,
+    "y": 100,
+    "wires": [
+      [
+        "f_cek_batas"
+      ]
+    ]
+  },
+  {
+    "id": "f_cek_batas",
+    "type": "function",
+    "z": "tab_tutup",
+    "name": "Cek batas absen",
+    "func": "// Dicek tiap 60 detik: begitu jam WIB mencapai batas absen (bawaan 21:00 = jam pulang + lembur maks),\n// rekap hari ini ditutup otomatis. Karyawan yang belum absen pulang -> LUPA_ABSEN_PULANG\n// (pulang dihitung 17:00, lembur 0). Hari sebelumnya yang belum ditutup (Node-RED mati) ikut ditutup.\nconst WIB = 7 * 3600 * 1000;\nconst J = Object.assign({ jam_pulang: '17:00', maks_lembur: 240 }, global.get('jadwal') || {});\nconst mnt = s => { const m = /^(\\d{1,2}):(\\d{2})$/.exec(String(s || '')); return m ? (+m[1]) * 60 + (+m[2]) : null; };\nconst batas = mnt(J.batas_absen) ?? (mnt(J.jam_pulang) + Number(J.maks_lembur));\nconst jam = x => String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0');\nconst now = new Date(Date.now() + WIB);\nconst hariIni = now.toISOString().slice(0, 10);\nconst menit = now.getUTCHours() * 60 + now.getUTCMinutes();\nconst sudah = global.get('tutupOtomatis') || {};\nconst keluar = [];\nfor (const t of Object.keys(global.get('harian') || {}).sort()) {\n    if (t < hariIni && !sudah[t]) { sudah[t] = true; keluar.push({ topic: 'otomatis', tanggal: t }); }\n}\nif (menit >= batas && !sudah[hariIni]) { sudah[hariIni] = true; keluar.push({ topic: 'otomatis', tanggal: hariIni }); }\nconst batasLama = new Date(Date.now() + WIB - 40 * 86400000).toISOString().slice(0, 10);\nfor (const t of Object.keys(sudah)) if (t < batasLama) delete sudah[t];\nglobal.set('tutupOtomatis', sudah);\nnode.status(sudah[hariIni]\n    ? { fill: 'blue', shape: 'dot', text: hariIni + ' sudah ditutup (batas ' + jam(batas) + ')' }\n    : { fill: 'green', shape: 'ring', text: 'tutup otomatis pukul ' + jam(batas) });\nif (!keluar.length) return null;\nreturn [keluar];",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 330,
+    "y": 100,
+    "wires": [
+      [
+        "f_tutup"
+      ]
+    ]
+  },
+  {
+    "id": "inj_uji",
+    "type": "inject",
+    "z": "tab_tutup",
+    "name": "Tutup hari ini (uji)",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "uji",
+    "payload": "",
+    "payloadType": "date",
+    "x": 160,
+    "y": 160,
+    "wires": [
+      [
+        "f_tutup"
+      ]
+    ]
+  },
+  {
+    "id": "li_ulang",
+    "type": "link in",
+    "z": "tab_tutup",
+    "name": "hitung ulang rekap",
+    "links": [
+      "lo_ulang"
+    ],
+    "x": 145,
+    "y": 220,
+    "wires": [
+      [
+        "f_tutup"
+      ]
+    ]
+  },
+  {
+    "id": "f_tutup",
+    "type": "function",
+    "z": "tab_tutup",
+    "name": "Tutup hari (hitungHarian)",
+    "func": "// Rekap final per karyawan: jam kerja normal, lembur, terlambat, lupa absen pulang, tidak hadir\nconst WIB = 7 * 3600 * 1000;\nconst DEV = 'Absensi-01';\nconst J = Object.assign({\n    buka_absen: '07:00', jam_masuk: '08:00', istirahat: '12:00-13:00', jam_pulang: '17:00',\n    min_lembur: 30, blok_lembur: 30, maks_lembur: 240, maks_lembur_minggu: 1080, hari_kerja: '1-5'\n}, global.get('jadwal') || {});\nconst mnt = s => { const [h, m] = String(s).split(':').map(Number); return h * 60 + m; };\nconst jam = x => x === null || x === undefined ? '-' : String(Math.floor(x / 60)).padStart(2, '0') + ':' + String(x % 60).padStart(2, '0');\nconst durasi = x => Math.floor(x / 60) + 'j ' + String(x % 60).padStart(2, '0') + 'm';\nconst [IS, IE] = String(J.istirahat).split('-').map(mnt);\nconst JM = mnt(J.jam_masuk), JP = mnt(J.jam_pulang);\nconst irisan = (a1, a2, b1, b2) => Math.max(0, Math.min(a2, b2) - Math.max(a1, b1));\n\nfunction hitungHarian(masuk, pulang) {\n    const wajib = JP - JM - (IE - IS);                          // 480 menit = 8 jam\n    if (masuk == null && pulang == null) return { status: 'TIDAK_HADIR', normal: 0, lembur: 0, telat: 0, cepat: 0 };\n    if (masuk == null) return { status: 'TIDAK_LENGKAP', normal: 0, lembur: 0, telat: 0, cepat: 0 };\n    let status = 'HADIR';\n    if (pulang == null) { pulang = JP; status = 'LUPA_ABSEN_PULANG'; }   // dianggap pulang normal, tanpa lembur\n    const batasLembur = JP + Number(J.maks_lembur);             // 21:00\n    const mulai = Math.max(masuk, JM);                          // datang lebih awal tidak dihitung\n    const akhir = Math.min(pulang, batasLembur);\n    const kerja = Math.max(0, akhir - mulai) - irisan(mulai, akhir, IS, IE);\n    const telat = Math.max(0, masuk - JM);\n    const cepat = Math.max(0, JP - pulang);\n    // lembur = waktu setelah jam pulang, hanya bagian yang melebihi jam wajib\n    const lemburMentah = status === 'LUPA_ABSEN_PULANG' ? 0 : Math.min(Math.max(0, kerja - wajib), Math.max(0, akhir - JP));\n    const lembur = lemburMentah < J.min_lembur ? 0 : Math.floor(lemburMentah / J.blok_lembur) * J.blok_lembur;\n    const normal = Math.min(Math.max(0, kerja), wajib);\n    if (status === 'HADIR') status = cepat > 0 ? 'PULANG_CEPAT' : (telat > 0 ? 'TERLAMBAT' : 'TEPAT_WAKTU');\n    return { status, normal, lembur, telat, cepat };\n}\n\n// tanggal yang ditutup: otomatis (batas absen) & hitung ulang -> msg.tanggal, tombol uji -> hari ini\nlet tanggal = msg.tanggal;\nif (!tanggal) tanggal = new Date(Date.now() + WIB).toISOString().slice(0, 10);\nconst hariKe = t => { const d = new Date(t + 'T00:00:00Z').getUTCDay(); return d === 0 ? 7 : d; };\nconst hariKerja = new Set();\nString(J.hari_kerja).split(',').forEach(bag => {\n    const [a, b] = bag.split('-').map(Number);\n    for (let i = a; i <= (b || a); i++) hariKerja.add(i);\n});\nconst isHariKerja = hariKerja.has(hariKe(tanggal));\n\nconst karyawan = global.get('karyawan') || {};\nconst harian = (global.get('harian') || {})[tanggal] || {};\nconst rekap = global.get('rekap') || {};\nconst senin = (() => { const d = new Date(tanggal + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() - (hariKe(tanggal) - 1)); return d.toISOString().slice(0, 10); })();\n\nconst base = Date.parse(tanggal + 'T23:59:00+07:00');\nconst baris = [];\nconst hasilHari = {};\nconst total = { hadir: 0, terlambat: 0, tidak_hadir: 0, lupa_pulang: 0, lembur: 0, normal: 0 };\nlet i = 0;\nfor (const h of new Set([...Object.keys(karyawan), ...Object.keys(harian)])) {\n    const rec = harian[h] || { masuk: null, pulang: null };\n    const k = karyawan[h];\n    const nama = (typeof k === 'string' ? k : (k && k.nama)) || rec.nama || h;\n    if (!k && rec.masuk == null && rec.pulang == null) continue;\n    const r = hitungHarian(rec.masuk, rec.pulang);\n    if (!isHariKerja && r.status === 'TIDAK_HADIR') continue;     // hari libur bukan alpa\n    // batas lembur mingguan (PP 35/2021: maks 18 jam)\n    let sebelum = 0;\n    for (const t of Object.keys(rekap)) if (t >= senin && t < tanggal && rekap[t][h]) sebelum += rekap[t][h].lembur_mentah || 0;\n    const lemburMinggu = sebelum + r.lembur;\n    const lemburDihitung = Math.max(0, Math.min(r.lembur, Number(J.maks_lembur_minggu) - sebelum));\n    hasilHari[h] = { nama, status: r.status, lembur_mentah: r.lembur, lembur: lemburDihitung, normal: r.normal };\n\n    if (r.status !== 'TIDAK_HADIR' && r.status !== 'TIDAK_LENGKAP') total.hadir++;\n    if (r.telat > 0) total.terlambat++;\n    if (r.status === 'TIDAK_HADIR') total.tidak_hadir++;\n    if (r.status === 'LUPA_ABSEN_PULANG') total.lupa_pulang++;\n    total.lembur += lemburDihitung;\n    total.normal += r.normal;\n    i++;\n    baris.push({ ts: base + i, values: {\n        rekap_tanggal: tanggal, rekap_nama: nama, rekap_kartu: h, rekap_status: r.status,\n        rekap_masuk: jam(rec.masuk), rekap_pulang: r.status === 'LUPA_ABSEN_PULANG' ? '-' : jam(rec.pulang),\n        rekap_normal_menit: r.normal, rekap_lembur_menit: lemburDihitung, rekap_telat_menit: r.telat, rekap_cepat_menit: r.cepat,\n        rekap_kerja_teks: durasi(r.normal), rekap_lembur_teks: durasi(lemburDihitung), lembur_minggu_menit: lemburMinggu\n    } });\n}\nbaris.push({ ts: base, values: {\n    harian_tanggal: tanggal, harian_hadir: total.hadir, harian_terlambat: total.terlambat,\n    harian_tidak_hadir: total.tidak_hadir, harian_lupa_pulang: total.lupa_pulang,\n    harian_total_lembur_menit: total.lembur, harian_total_normal_menit: total.normal\n} });\n\nrekap[tanggal] = hasilHari;\nconst ditutup = global.get('tanggalDitutup') || {};\nditutup[tanggal] = true;\nconst batas = new Date(Date.now() + WIB - 40 * 86400000).toISOString().slice(0, 10);\nfor (const t of Object.keys(rekap)) if (t < batas) delete rekap[t];\nfor (const t of Object.keys(ditutup)) if (t < batas) delete ditutup[t];\nglobal.set('rekap', rekap);\nglobal.set('tanggalDitutup', ditutup);\n\nnode.status({ fill: 'blue', shape: 'dot', text: tanggal + ': ' + i + ' karyawan, ' + total.hadir + ' hadir' });\nreturn { topic: 'v1/gateway/telemetry', payload: { [DEV]: baris } };",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 410,
+    "y": 160,
+    "wires": [
+      [
+        "out_tb2",
+        "dbg_rekap"
+      ]
+    ]
+  },
+  {
+    "id": "out_tb2",
+    "type": "mqtt out",
+    "z": "tab_tutup",
+    "name": "ThingsBoard",
+    "topic": "",
+    "qos": "1",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "broker_tb",
+    "x": 650,
+    "y": 140,
+    "wires": []
+  },
+  {
+    "id": "dbg_rekap",
+    "type": "debug",
+    "z": "tab_tutup",
+    "name": "rekap harian",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "true",
+    "targetType": "full",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 660,
+    "y": 200,
+    "wires": []
+  },
+  {
+    "id": "tab_config",
+    "type": "tab",
+    "label": "3. Konfigurasi",
+    "disabled": false,
+    "info": "Data karyawan & jadwal (shared attributes ThingsBoard) diteruskan ke ESP32 sebagai pesan retained."
+  },
+  {
+    "id": "c3",
+    "type": "comment",
+    "z": "tab_config",
+    "name": "ThingsBoard -> Node-RED -> ESP32",
+    "info": "Admin mengubah shared attribute 'karyawan' atau 'jadwal' pada device Absensi-01.",
+    "x": 210,
+    "y": 40,
+    "wires": []
+  },
+  {
+    "id": "in_attr",
+    "type": "mqtt in",
+    "z": "tab_config",
+    "name": "v1/gateway/attributes",
+    "topic": "v1/gateway/attributes",
+    "qos": "1",
+    "datatype": "json",
+    "broker": "broker_tb",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 170,
+    "y": 100,
+    "wires": [
+      [
+        "f_config"
+      ]
+    ]
+  },
+  {
+    "id": "in_attr_resp",
+    "type": "mqtt in",
+    "z": "tab_config",
+    "name": "v1/gateway/attributes/response",
+    "topic": "v1/gateway/attributes/response",
+    "qos": "1",
+    "datatype": "json",
+    "broker": "broker_tb",
+    "nl": false,
+    "rap": true,
+    "rh": 0,
+    "inputs": 0,
+    "x": 200,
+    "y": 160,
+    "wires": [
+      [
+        "f_config"
+      ]
+    ]
+  },
+  {
+    "id": "f_config",
+    "type": "function",
+    "z": "tab_config",
+    "name": "Karyawan & jadwal",
+    "func": "// Data karyawan & jadwal dari ThingsBoard (shared attributes) -> simpan -> kirim ke ESP32\nconst DEV = 'Absensi-01';\nconst p = msg.payload;\nif (!p || typeof p !== 'object') return null;\nlet data = null;\nif (msg.topic === 'v1/gateway/attributes') {\n    if (p.device !== DEV) return null;\n    data = p.data;\n} else {                                     // v1/gateway/attributes/response\n    if (p.device && p.device !== DEV) return null;\n    data = p.values || p.value || null;\n}\nif (!data || typeof data !== 'object') return null;\nconst baca = v => {\n    if (typeof v !== 'string') return v;\n    try { return JSON.parse(v); } catch (e) { node.warn('Atribut bukan JSON yang valid: ' + v); return undefined; }\n};\nlet ada = false;\nif (data.karyawan !== undefined) { const k = baca(data.karyawan); if (k && typeof k === 'object') { global.set('karyawan', k); ada = true; } }\nif (data.jadwal !== undefined) { const j = baca(data.jadwal); if (j && typeof j === 'object') { global.set('jadwal', j); ada = true; } }\nif (!ada) return null;\nconst karyawan = global.get('karyawan') || {};\nnode.status({ fill: 'green', shape: 'dot', text: Object.keys(karyawan).length + ' karyawan diterima' });\nreturn { topic: 'absensi/absensi-01/config', payload: { karyawan: karyawan, jadwal: global.get('jadwal') || {} }, retain: true, qos: 1 };",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 450,
+    "y": 130,
+    "wires": [
+      [
+        "out_lokal3",
+        "dbg_config"
+      ]
+    ]
+  },
+  {
+    "id": "out_lokal3",
+    "type": "mqtt out",
+    "z": "tab_config",
+    "name": "broker lokal (retain)",
+    "topic": "",
+    "qos": "1",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "broker_lokal",
+    "x": 690,
+    "y": 110,
+    "wires": []
+  },
+  {
+    "id": "dbg_config",
+    "type": "debug",
+    "z": "tab_config",
+    "name": "config",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "true",
+    "targetType": "full",
+    "statusVal": "",
+    "statusType": "auto",
+    "x": 660,
+    "y": 170,
+    "wires": []
+  },
+  {
+    "id": "inj_start",
+    "type": "inject",
+    "z": "tab_config",
+    "name": "saat mulai",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 5,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 140,
+    "y": 240,
+    "wires": [
+      [
+        "f_config_simpan"
+      ]
+    ]
+  },
+  {
+    "id": "f_config_simpan",
+    "type": "function",
+    "z": "tab_config",
+    "name": "Kirim config tersimpan",
+    "func": "// Saat Node-RED baru menyala: kirim lagi data karyawan & jadwal yang tersimpan (retained)\nconst karyawan = global.get('karyawan');\nif (!karyawan) { node.status({ fill: 'yellow', shape: 'ring', text: 'belum ada data dari ThingsBoard' }); return null; }\nnode.status({ fill: 'green', shape: 'dot', text: Object.keys(karyawan).length + ' karyawan' });\nreturn { topic: 'absensi/absensi-01/config', payload: { karyawan: karyawan, jadwal: global.get('jadwal') || {} }, retain: true, qos: 1 };",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 390,
+    "y": 240,
+    "wires": [
+      [
+        "out_lokal3"
+      ]
+    ]
+  },
+  {
+    "id": "st_tb",
+    "type": "status",
+    "z": "tab_config",
+    "name": "status ThingsBoard",
+    "scope": [
+      "in_attr"
+    ],
+    "x": 160,
+    "y": 320,
+    "wires": [
+      [
+        "f_minta"
+      ]
+    ]
+  },
+  {
+    "id": "inj_minta",
+    "type": "inject",
+    "z": "tab_config",
+    "name": "tiap 10 menit",
+    "props": [
+      {
+        "p": "payload"
+      },
+      {
+        "p": "topic",
+        "vt": "str"
+      }
+    ],
+    "repeat": "600",
+    "crontab": "",
+    "once": true,
+    "onceDelay": 15,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 150,
+    "y": 380,
+    "wires": [
+      [
+        "f_minta"
+      ]
+    ]
+  },
+  {
+    "id": "f_minta",
+    "type": "function",
+    "z": "tab_config",
+    "name": "Minta atribut",
+    "func": "// Saat tersambung ke ThingsBoard: umumkan perangkat lalu minta data karyawan & jadwal\nif (msg.status && msg.status.fill && msg.status.fill !== 'green') return null;\nconst DEV = 'Absensi-01';\nreturn [[\n    { topic: 'v1/gateway/connect', payload: { device: DEV, type: 'default' } },\n    { topic: 'v1/gateway/attributes/request', payload: { id: Math.floor(Math.random() * 100000), device: DEV, client: false, keys: ['karyawan', 'jadwal'] } }\n]];",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 380,
+    "y": 350,
+    "wires": [
+      [
+        "out_tb3"
+      ]
+    ]
+  },
+  {
+    "id": "out_tb3",
+    "type": "mqtt out",
+    "z": "tab_config",
+    "name": "ThingsBoard",
+    "topic": "",
+    "qos": "1",
+    "retain": "",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "broker_tb",
+    "x": 580,
+    "y": 350,
+    "wires": []
+  }
+]

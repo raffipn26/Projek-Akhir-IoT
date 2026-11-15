@@ -1,0 +1,12 @@
+{
+  "buka_absen": "07:00",
+  "jam_masuk": "08:00",
+  "istirahat": "12:00-13:00",
+  "jam_pulang": "17:00",
+  "min_lembur": 30,
+  "blok_lembur": 30,
+  "maks_lembur": 240,
+  "maks_lembur_minggu": 1080,
+  "hari_kerja": "1-5",
+  "batas_absen": "21:00"
+}

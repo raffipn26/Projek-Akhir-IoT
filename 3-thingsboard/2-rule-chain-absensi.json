@@ -1,0 +1,393 @@
+{
+  "ruleChain": {
+    "name": "Root Rule Chain Absensi",
+    "type": "CORE",
+    "firstRuleNodeId": null,
+    "root": false,
+    "debugMode": false,
+    "configuration": null,
+    "additionalInfo": null
+  },
+  "metadata": {
+    "version": 5,
+    "firstNodeIndex": 6,
+    "nodes": [
+      {
+        "type": "org.thingsboard.rule.engine.telemetry.TbMsgTimeseriesNode",
+        "name": "Save Timeseries",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 1,
+        "configuration": {
+          "defaultTTL": 2592000,
+          "useServerTs": false,
+          "processingSettings": {
+            "type": "ON_EVERY_MESSAGE"
+          }
+        },
+        "additionalInfo": {
+          "layoutX": 850,
+          "layoutY": 200
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.telemetry.TbMsgAttributesNode",
+        "name": "Save Attributes",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 3,
+        "configuration": {
+          "processingSettings": {
+            "type": "ON_EVERY_MESSAGE"
+          },
+          "scope": "CLIENT_SCOPE",
+          "notifyDevice": false,
+          "sendAttributesUpdatedNotification": false,
+          "updateAttributesOnlyOnValueChange": true
+        },
+        "additionalInfo": {
+          "layoutX": 850,
+          "layoutY": 110
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.filter.TbMsgTypeSwitchNode",
+        "name": "Message Type Switch",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "version": 0
+        },
+        "additionalInfo": {
+          "layoutX": 566,
+          "layoutY": 302
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.action.TbLogNode",
+        "name": "Log RPC from Device",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "TBEL",
+          "jsScript": "return '\\nIncoming message:\\n' + JSON.stringify(msg) + '\\nIncoming metadata:\\n' + JSON.stringify(metadata);",
+          "tbelScript": "return '\\nIncoming message:\\n' + JSON.stringify(msg) + '\\nIncoming metadata:\\n' + JSON.stringify(metadata);"
+        },
+        "additionalInfo": {
+          "layoutX": 850,
+          "layoutY": 290
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.action.TbLogNode",
+        "name": "Log Other",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "TBEL",
+          "jsScript": "return '\\nIncoming message:\\n' + JSON.stringify(msg) + '\\nIncoming metadata:\\n' + JSON.stringify(metadata);",
+          "tbelScript": "return '\\nIncoming message:\\n' + JSON.stringify(msg) + '\\nIncoming metadata:\\n' + JSON.stringify(metadata);"
+        },
+        "additionalInfo": {
+          "layoutX": 850,
+          "layoutY": 380
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.rpc.TbSendRPCRequestNode",
+        "name": "RPC Call Request",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "timeoutInSeconds": 60
+        },
+        "additionalInfo": {
+          "layoutX": 850,
+          "layoutY": 470
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.filter.TbOriginatorTypeFilterNode",
+        "name": "Is Entity Group",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "originatorTypes": [
+            "ENTITY_GROUP"
+          ]
+        },
+        "additionalInfo": {
+          "layoutX": 255,
+          "layoutY": 301
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.filter.TbMsgTypeFilterNode",
+        "name": "Post attributes or RPC request",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "messageTypes": [
+            "POST_ATTRIBUTES_REQUEST",
+            "RPC_CALL_FROM_SERVER_TO_DEVICE"
+          ]
+        },
+        "additionalInfo": {
+          "layoutX": 319,
+          "layoutY": 109
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.transform.TbDuplicateMsgToGroupNode",
+        "name": "Duplicate To Group Entities",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 1,
+        "configuration": {
+          "entityGroupId": null,
+          "entityGroupIsMessageOriginator": true
+        },
+        "additionalInfo": {
+          "layoutX": 627,
+          "layoutY": 108
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
+        "name": "Cek titip absen",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "TBEL",
+          "tbelScript": "return msg.titip_absen == 1;",
+          "jsScript": "return msg.titip_absen == 1;"
+        },
+        "additionalInfo": {
+          "description": "Lolos jika ESP32 melaporkan 1 orang menempelkan 2 kartu berbeda",
+          "layoutX": 566,
+          "layoutY": 470
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "Alarm titip absen",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "alarmType": "Dicurigai titip absen",
+          "scriptLang": "TBEL",
+          "alarmDetailsBuildJs": "var details = {};\ndetails.pesan = 'Satu orang menempelkan dua kartu berbeda';\ndetails.kartu = msg.kartu;\ndetails.nama = msg.nama;\nreturn details;",
+          "alarmDetailsBuildTbel": "var details = {};\ndetails.pesan = 'Satu orang menempelkan dua kartu berbeda';\ndetails.kartu = msg.kartu;\ndetails.nama = msg.nama;\nreturn details;",
+          "severity": "MAJOR",
+          "propagate": false,
+          "propagateToOwner": false,
+          "propagateToOwnerHierarchy": false,
+          "propagateToTenant": false,
+          "useMessageAlarmData": false,
+          "overwriteAlarmDetails": false,
+          "dynamicSeverity": false,
+          "relationTypes": []
+        },
+        "additionalInfo": {
+          "description": "Membuat alarm MAJOR di ThingsBoard",
+          "layoutX": 566,
+          "layoutY": 600
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
+        "name": "Cek lupa absen pulang",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "TBEL",
+          "tbelScript": "return msg.rekap_status == 'LUPA_ABSEN_PULANG';",
+          "jsScript": "return msg.rekap_status == 'LUPA_ABSEN_PULANG';"
+        },
+        "additionalInfo": {
+          "description": "Rekap harian dari Node-RED berstatus LUPA_ABSEN_PULANG",
+          "layoutX": 820,
+          "layoutY": 560
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "Alarm lupa absen pulang",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "alarmType": "Lupa absen pulang",
+          "severity": "MINOR",
+          "scriptLang": "TBEL",
+          "alarmDetailsBuildTbel": "var details = {};\ndetails.pesan = 'Karyawan tidak absen pulang, jam kerja dihitung sampai jam pulang normal tanpa lembur';\ndetails.nama = msg.rekap_nama;\ndetails.tanggal = msg.rekap_tanggal;\ndetails.masuk = msg.rekap_masuk;\nreturn details;",
+          "alarmDetailsBuildJs": "var details = {};\ndetails.pesan = 'Karyawan tidak absen pulang, jam kerja dihitung sampai jam pulang normal tanpa lembur';\ndetails.nama = msg.rekap_nama;\ndetails.tanggal = msg.rekap_tanggal;\ndetails.masuk = msg.rekap_masuk;\nreturn details;",
+          "dynamicSeverity": false,
+          "overwriteAlarmDetails": false,
+          "propagate": false,
+          "propagateToOwner": false,
+          "propagateToOwnerHierarchy": false,
+          "propagateToTenant": false,
+          "relationTypes": [],
+          "useMessageAlarmData": false
+        },
+        "additionalInfo": {
+          "description": "Membuat alarm MINOR",
+          "layoutX": 820,
+          "layoutY": 680
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.filter.TbJsFilterNode",
+        "name": "Cek lembur mingguan",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "scriptLang": "TBEL",
+          "tbelScript": "return msg.lembur_minggu_menit != null && msg.lembur_minggu_menit > 1080;",
+          "jsScript": "return msg.lembur_minggu_menit != null && msg.lembur_minggu_menit > 1080;"
+        },
+        "additionalInfo": {
+          "description": "Lembur seminggu lebih dari 18 jam (1080 menit, PP 35/2021)",
+          "layoutX": 1080,
+          "layoutY": 560
+        }
+      },
+      {
+        "type": "org.thingsboard.rule.engine.action.TbCreateAlarmNode",
+        "name": "Alarm lembur mingguan",
+        "debugSettings": null,
+        "singletonMode": false,
+        "queueName": null,
+        "configurationVersion": 0,
+        "configuration": {
+          "alarmType": "Lembur mingguan lebih dari 18 jam",
+          "severity": "MAJOR",
+          "scriptLang": "TBEL",
+          "alarmDetailsBuildTbel": "var details = {};\ndetails.pesan = 'Lembur minggu ini melebihi 18 jam, kelebihannya tidak dihitung';\ndetails.nama = msg.rekap_nama;\ndetails.tanggal = msg.rekap_tanggal;\ndetails.lembur_minggu_menit = msg.lembur_minggu_menit;\nreturn details;",
+          "alarmDetailsBuildJs": "var details = {};\ndetails.pesan = 'Lembur minggu ini melebihi 18 jam, kelebihannya tidak dihitung';\ndetails.nama = msg.rekap_nama;\ndetails.tanggal = msg.rekap_tanggal;\ndetails.lembur_minggu_menit = msg.lembur_minggu_menit;\nreturn details;",
+          "dynamicSeverity": false,
+          "overwriteAlarmDetails": false,
+          "propagate": false,
+          "propagateToOwner": false,
+          "propagateToOwnerHierarchy": false,
+          "propagateToTenant": false,
+          "relationTypes": [],
+          "useMessageAlarmData": false
+        },
+        "additionalInfo": {
+          "description": "Membuat alarm MAJOR",
+          "layoutX": 1080,
+          "layoutY": 680
+        }
+      }
+    ],
+    "connections": [
+      {
+        "fromIndex": 2,
+        "toIndex": 0,
+        "type": "Post telemetry"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 1,
+        "type": "Post attributes"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 3,
+        "type": "RPC Request from Device"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 4,
+        "type": "Other"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 5,
+        "type": "RPC Request to Device"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 9,
+        "type": "Post telemetry"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 11,
+        "type": "Post telemetry"
+      },
+      {
+        "fromIndex": 2,
+        "toIndex": 13,
+        "type": "Post telemetry"
+      },
+      {
+        "fromIndex": 6,
+        "toIndex": 2,
+        "type": "False"
+      },
+      {
+        "fromIndex": 6,
+        "toIndex": 7,
+        "type": "True"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 2,
+        "type": "False"
+      },
+      {
+        "fromIndex": 7,
+        "toIndex": 8,
+        "type": "True"
+      },
+      {
+        "fromIndex": 8,
+        "toIndex": 2,
+        "type": "Success"
+      },
+      {
+        "fromIndex": 9,
+        "toIndex": 10,
+        "type": "True"
+      },
+      {
+        "fromIndex": 11,
+        "toIndex": 12,
+        "type": "True"
+      },
+      {
+        "fromIndex": 13,
+        "toIndex": 14,
+        "type": "True"
+      }
+    ],
+    "ruleChainConnections": null
+  }
+}

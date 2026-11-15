@@ -1,0 +1,18 @@
+SETUP THINGSBOARD SENDIRI - isi folder
+=======================================
+CARA OTOMATIS (disarankan): klik MULAI.bat di folder utama (atau lanjutan\0-SETUP-THINGSBOARD.bat).
+Skrip itu memakai file-file di folder ini, membuat semuanya sekaligus, dan memperbaruinya
+saat ada zip versi baru (lihat PANDUAN.md bagian paling atas).
+
+CARA MANUAL:
+Panduan lengkap bergambar: dokumen\Panduan_Setup_ThingsBoard.pdf (di folder utama paket)
+
+1-dashboard-absensi-karyawan.json  Dashboards -> + Add dashboard -> Import dashboard
+2-rule-chain-absensi.json          Rule chains -> + Add rule chain -> Import rule chain
+                                   -> Apply changes -> jadikan Root (ikon bendera)
+3-atribut-jadwal.json              isi shared attribute "jadwal" (tipe JSON) di device Absensi-01
+4-atribut-karyawan.json            isi shared attribute "karyawan" (tipe JSON) di device Absensi-01
+
+Urutan: buat device "Gateway Node-RED" (Is gateway ON) dan "Absensi-01"
+-> atribut -> rule chain -> dashboard -> customer HRD -> token gateway ke lanjutan\1-SIAPKAN.bat
+Nama device "Absensi-01" harus persis sama (dipakai Node-RED dan dashboard).
